@@ -1,0 +1,3 @@
+-r REQUIREMENTS.txt
+
+isort==5.12.0

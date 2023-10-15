@@ -8,12 +8,12 @@ from core import (
 
 def main():
 
-    categories_url = config.get('trendyol', 'categories_url')
-    categories = requests.get(categories_url).json().get('categories')
-    processed_categories = unpack_categories(categories)
-    send_categories(processed_categories)
+    # categories_url = config.get('trendyol', 'categories_url')
+    # categories = requests.get(categories_url).json().get('categories')
+    # processed_categories = unpack_categories(categories)
+    # send_categories(processed_categories)
 
-    category_attributes_url = config.get('trendyol', 'category_attributes_url').format('5349')
+    category_attributes_url = config.get('trendyol', 'category_attributes_url').format('1058')
     category_attributes_json = requests.get(category_attributes_url).json()
     category_attributes = category_attributes_json.get('categoryAttributes')
     processed_attributes, processed_attribute_values = unpack_attributes(category_attributes)
@@ -85,7 +85,7 @@ def unpack_attributes(attribute_datas: list[dict]) -> tuple[list[dict], list[dic
     for attribute_data in attribute_datas:
         attribute = attribute_data.get('attribute')
         processed_attributes.append(
-            dict(name=attribute.get('name'), external_id=attribute.get('id'), provider_category=['5349'])
+            dict(name=attribute.get('name'), external_id=attribute.get('id'), provider_category=['1058'])
         )
 
         attribute_values = attribute_data.get('attributeValues')
@@ -100,16 +100,46 @@ def unpack_attributes(attribute_datas: list[dict]) -> tuple[list[dict], list[dic
 
 def send_attributes(attributes: list[dict]):
     characteristics_url = config.get('markets_bridge', 'provider_characteristics_url')
-    response = requests.post(characteristics_url, json=attributes)
+    existed_characteristics = requests.get(characteristics_url).json()
+    existed_char_ids = set(record.get('external_id') for record in existed_characteristics)
 
-    print(f'{"Загрузка характеристик в систему успешна" if response.status_code == 201 else "Ошибка загрузки характеристик"}')
+    new_chars = list(
+        filter(
+            lambda char: char.get('external_id')
+            not in existed_char_ids, attributes
+        )
+    )
+
+    response = requests.post(characteristics_url, json=new_chars)
+
+    if response.status_code == 201:
+        response_message = f'Loaded {len(response.json())} provider characteristics'
+    else:
+        response_message = f'Unexpected response from the server:\n{response.status_code}\n'
+    
+    print(response_message)
 
 
 def send_attribute_values(attribute_values: list[dict]):
     characteristic_values_url = config.get('markets_bridge', 'provider_characteristic_values_url')
-    response = requests.post(characteristic_values_url, json=attribute_values)
+    existed_characteristic_values = requests.get(characteristic_values_url).json()
+    existed_char_value_ids = set(record.get('external_id') for record in existed_characteristic_values)
 
-    print(f'{"Загрузка значений характеристик в систему успешна" if response.status_code == 201 else "Ошибка загрузки значений характеристик"}')
+    new_char_values = list(
+        filter(
+            lambda char: char.get('external_id')
+            not in existed_char_value_ids, attribute_values
+        )
+    )
+
+    response = requests.post(characteristic_values_url, json=new_char_values)
+
+    if response.status_code == 201:
+        response_message = f'Loaded {len(response.json())} provider characteristic values'
+    else:
+        response_message = f'Unexpected response from the server:\n{response.status_code}\n'
+    
+    print(response_message)
 
 
 if __name__ == '__main__':

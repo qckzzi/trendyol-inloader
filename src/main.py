@@ -1,15 +1,19 @@
 #!/usr/bin/env python
-from attribute_processing import (
-    process_attributes,
+from markets_bridge.services import (
+    Formatter,
+    Sender,
 )
-from category_processing import (
-    process_categories,
+from trendyol.services import (
+    Fetcher,
 )
 
 
 def main():
-    process_categories()
-    process_attributes()
+    fetcher = Fetcher()
+
+    categories = fetcher.get_categories()
+    formatted_categories = Formatter.format_categories(categories)
+    Sender.send_categories(formatted_categories)
 
 
 if __name__ == '__main__':
